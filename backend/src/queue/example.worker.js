@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import connection from "./src/db/redis.js";
+import connection from "../db/redis.js";
 
 const emailWorker = new Worker('EmailQueue', async (job) => {
     console.log(`\n⚙️ [Job ${job.id}]: Processing started...`);
@@ -9,7 +9,14 @@ const emailWorker = new Worker('EmailQueue', async (job) => {
     await new Promise((resolve) => setTimeout(resolve, 4000));
 
     console.log(`✅ [Job ${job.id}]: Email sent successfully!\n`);
-}, { connection });
+}, {
+     connection,
+     concurrency: 10,
+     limiter: {
+        max: 50,
+        duration: 1000,
+     },
+    });
 
 
 emailWorker.on('completed', (job) => {
