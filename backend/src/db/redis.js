@@ -1,18 +1,14 @@
-import IORedis from "ioredis";  // Default import, named nahi
+import IORedis from "ioredis";
 
 const connection = new IORedis({
   host: '127.0.0.1',
   port: 6379,
-  maxRetriesPerRequest: null // BullMQ ke liye yeh zaroori hai
+  maxRetriesPerRequest: null,
+  lazyConnect: false // default hi false hai, explicitly likhne ki zaroorat nahi
 });
 
-export const dbConnection = async () => {
-  try {
-    await connection.connect();
-    console.log('Connected to Redis');
-  } catch (error) {
-    console.error('Error connecting to Redis:', error);
-  }
-};
+// Event listeners lagao status check ke liye
+connection.on('connect', () => console.log('✅ Redis connected!'));
+connection.on('error', (err) => console.error('❌ Redis error:', err.message));
 
 export default connection;
