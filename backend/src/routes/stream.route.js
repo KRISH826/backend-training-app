@@ -39,6 +39,42 @@ router.get("/stream-file-text", (req, res) => {
 
 })
 
+
+router.get("/stream-file-video", (req, res) => {
+    const filePath = path.resolve(__dirname, "../assests/spotify-design.mp4");
+    if(!fs.existsSync(filePath)) {
+        return res.status(404).send("File not found");
+    }
+    const videoSize = fs.statSync(filePath).size;
+    const range = req.headers.range;
+
+    if(!range) {
+        res.setHeader('Content-Length', videoSize);
+        res.setHeader('Content-Type', 'video/mp4');
+        return fs.createReadStream(filePath).pipe(res);
+    }
+
+    const CHUNK_SIZE = 1024 *  1024;
+
+    const start = Number(range.replace(/\D/g, ""));
+    const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+
+    const contentLength = end - start + 1;
+
+    const headers = {
+        "Content-Range": `bytes ${start}-${end}/${videoSize}`,
+        "Accept-Range": "bytes",
+        "Content-Length": `${contentLength}`,
+        "Content-Type": "video/mp4"
+    }
+
+    res.writeHead(206, headers);
+
+    const videoStream = fs.createReadStream(filePath, {start, end});
+    videoStream.pipe(res);
+
+})
+
 export default router;
 
 
