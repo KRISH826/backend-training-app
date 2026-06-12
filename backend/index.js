@@ -2,6 +2,7 @@ import express from "express";
 import connection from './src/db/redis.js'; // bas import karo, connect() nahi
 import emailqueue from "./src/queue/example.queue.js";
 import "./src/queue/example.worker.js";
+import streamRouter from "./src/routes/stream.route.js";
 
 const app = express();
 app.use(express.json());
@@ -31,6 +32,8 @@ app.post("/send-email", async (req, res) => {
     })
     // await mailqueue.add("email", { to: email, body: message });
 })
+
+app.use("/stream", streamRouter);
 
 app.listen(3000, () => {
     console.log("Example app listening on port 3000!");
