@@ -6,11 +6,3 @@ export const io = new Server({
         methods: ["GET", "POST"]
     }
 })
-
-io.on("connection", (socket) => {
-    console.log(`User Connected: ${socket.id}`);
-})
-
-io.on("disconnect", () => {
-    console.log("User Disconnected");
-})

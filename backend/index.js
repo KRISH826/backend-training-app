@@ -3,6 +3,7 @@ import connection from './src/db/redis.js'; // bas import karo, connect() nahi
 import emailqueue from "./src/queue/example.queue.js";
 import "./src/queue/example.worker.js";
 import streamRouter from "./src/routes/stream.route.js";
+import { io } from "./src/utils/socket.js";
 
 const app = express();
 app.use(express.json());
@@ -31,6 +32,14 @@ app.post("/send-email", async (req, res) => {
         jobId: job.id
     })
     // await mailqueue.add("email", { to: email, body: message });
+});
+
+io.on("connection", (socket) => {
+    console.log(`User Connected: ${socket.id}`);
+})
+
+io.on("disconnect", () => {
+    console.log("User Disconnected");
 })
 
 app.use("/stream", streamRouter);
