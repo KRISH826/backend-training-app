@@ -34,9 +34,7 @@ router.get("/stream-file-text", (req, res) => {
     readableStream.on('error', (err) => {
         console.error(err);
         res.status(500).send(err.message);
-    })
-
-
+    });
 })
 
 
