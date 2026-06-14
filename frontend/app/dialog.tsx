@@ -62,41 +62,43 @@ export default function ChatDialog() {
   return (
     <>
       {hasJoined ? (
-        <Card className="mx-auto min-h-[calc(100vh-80px)] w-full max-w-[800px] md:min-w-[650px]">
-          <CardHeader className="border-b">
-            <CardTitle>Room Chat</CardTitle>
-            <CardDescription>Joined as {joinedName}</CardDescription>
+        <Card className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[800px] gap-0 rounded-lg shadow-sm md:min-w-[650px]">
+          <CardHeader className="border-b px-5 py-4">
+            <CardTitle className="text-lg leading-none">Room Chat</CardTitle>
+            <CardDescription className="text-xs">
+              Joined as {joinedName}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col gap-3 rounded-lg bg-muted/40 p-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col px-5 py-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-md bg-muted/40 p-3">
               {roomMessages.map((message) => (
                 <div
                   key={message.id}
                   className={
                     message.own
-                      ? "ml-auto max-w-[78%] rounded-lg bg-primary px-4 py-3 text-primary-foreground"
-                      : "mr-auto max-w-[78%] rounded-lg border bg-background px-4 py-3"
+                      ? "ml-auto max-w-[82%] rounded-md bg-primary px-3 py-2 text-primary-foreground"
+                      : "mr-auto max-w-[82%] rounded-md border bg-background px-3 py-2"
                   }
                 >
                   <p className="text-xs font-medium opacity-80">
                     {message.own ? joinedName : message.name}
                   </p>
-                  <p className="mt-1 leading-6">{message.text}</p>
+                  <p className="mt-1 leading-5">{message.text}</p>
                 </div>
               ))}
             </div>
           </CardContent>
-          <CardFooter className="border-t">
+          <CardFooter className="border-t px-5 py-4">
             <form
-              className="flex w-full flex-col gap-3 sm:flex-row"
+              className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end"
               onSubmit={(event) => event.preventDefault()}
             >
               <Textarea
-                className="min-h-24 resize-none sm:min-h-16"
+                className="max-h-32 min-h-11 resize-none py-2.5"
                 placeholder="Type your message"
               />
               <button
-                className="h-10 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+                className="h-11 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 sm:w-24"
                 type="submit"
               >
                 Send
@@ -110,20 +112,21 @@ export default function ChatDialog() {
 
       <Dialog open={!hasJoined}>
         <DialogContent
-          className="sm:max-w-sm"
+          className="gap-4 rounded-lg p-5 shadow-2xl sm:max-w-[360px]"
           showCloseButton={false}
           onEscapeKeyDown={(event) => event.preventDefault()}
           onPointerDownOutside={(event) => event.preventDefault()}
         >
-          <form className="space-y-5" onSubmit={handleJoin}>
-            <DialogHeader>
-              <DialogTitle>Enter your name</DialogTitle>
+          <form className="space-y-4" onSubmit={handleJoin}>
+            <DialogHeader className="gap-1">
+              <DialogTitle className="text-lg">Enter your name</DialogTitle>
               <DialogDescription className="sr-only">
                 Enter your name before joining the room.
               </DialogDescription>
             </DialogHeader>
             <Input
               autoFocus
+              className="h-10"
               placeholder="Enter your name"
               value={name}
               onChange={(event) => setName(event.target.value)}

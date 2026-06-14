@@ -4,9 +4,17 @@ import emailqueue from "./src/queue/example.queue.js";
 import "./src/queue/example.worker.js";
 import streamRouter from "./src/routes/stream.route.js";
 import { io } from "./src/utils/socket.js";
+import cors from "cors"; 
+
 
 const app = express();
+app.use(cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PATCH", "DELETE", "PUT"]
+}));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
 
 app.get("/", (req, res) => {
     res.send("Hello World!");
@@ -44,6 +52,6 @@ io.on("disconnect", () => {
 
 app.use("/stream", streamRouter);
 
-app.listen(3000, () => {
-    console.log("Example app listening on port 3000!");
+app.listen(4400, () => {
+    console.log("Example app listening on port 4400!");
 });
