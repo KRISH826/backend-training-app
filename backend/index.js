@@ -4,10 +4,13 @@ import emailqueue from "./src/queue/example.queue.js";
 import "./src/queue/example.worker.js";
 import streamRouter from "./src/routes/stream.route.js";
 import { io } from "./src/utils/socket.js";
-import cors from "cors"; 
+import cors from "cors";
+import {createServer} from "http"
 
 
 const app = express();
+const httpServer = createServer(app);
+io.attach(httpServer);
 app.use(cors({
     origin: "http://localhost:3000",
     methods: ["GET", "POST", "PATCH", "DELETE", "PUT"]
@@ -44,6 +47,21 @@ app.post("/send-email", async (req, res) => {
 
 io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
+
+    socket.on('joinRoom', async ({name}) => {
+        console.log(`User Joined Room: ${name}`);
+        await socket.join("room1");
+
+        // // send to all notification who is new member add
+        // io.to("room1").emit("roomNotice", name)
+
+        // broardcast (send them all excluding yourself)
+        socket.to("room1").emit("roomNotice", name);
+    })
+
+    socket.on("chat-message", async(msg) => {
+        socket.to("room1").emit("chat-message", msg);
+    })
 })
 
 io.on("disconnect", () => {
@@ -52,6 +70,7 @@ io.on("disconnect", () => {
 
 app.use("/stream", streamRouter);
 
-app.listen(4400, () => {
-    console.log("Example app listening on port 4400!");
-});
+const port=4400;
+httpServer.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+}) 

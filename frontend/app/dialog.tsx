@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
 
 import {
   Card,
@@ -19,22 +20,31 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { wsServer } from "@/lib/utils";
+
+interface messagePayloadType {
+  id: string;
+  name: string;
+  text: string;
+  own: boolean;
+  timestamp: string;
+}
 
 const roomMessages = [
   {
-    id: 1,
+    id: "1",
     name: "Ava",
     text: "Welcome in. The room is ready.",
     own: false,
   },
   {
-    id: 2,
+    id: "2",
     name: "You",
     text: "Thanks, I just joined.",
     own: true,
   },
   {
-    id: 3,
+    id: "3",
     name: "Sam",
     text: "Good to see everyone here.",
     own: false,
@@ -44,25 +54,73 @@ const roomMessages = [
 export default function ChatDialog() {
   const [name, setName] = useState("");
   const [joinedName, setJoinedName] = useState("");
+  const socketRef = useRef<Socket | null>(null);
+  const [messages, setMessages] = useState(roomMessages);
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    const socket = wsServer();
+    socketRef.current = socket;
+    socket.on("connect", () => {
+      socket.on("roomNotice", (name) => {
+        console.log(`${name} is new member now in our group`)
+      });
+
+      socket.on("chatMessage", (msg: messagePayloadType) => {
+        setMessages((prev) => [...prev, {
+          id: msg.id,
+          name: msg.name,
+          text: msg.text,
+          own: false, // Kyunki yeh kisi aur ka message hai
+          timestamp: msg.timestamp
+        }])
+      })
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [joinedName]);
+
+  
 
   const hasJoined = joinedName.length > 0;
 
   function handleJoin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     const trimmedName = name.trim();
-
     if (!trimmedName) {
       return;
     }
-
     setJoinedName(trimmedName);
+     socketRef.current?.emit("joinRoom", { name: trimmedName });
+  }
+
+  const sendMessage = (
+    event?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+      event?.preventDefault();
+      if(!text.trim()) {
+        return
+      }
+
+      const messagePayload = {
+        id: String(Date.now()),
+        name: joinedName,
+        text: text,
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+      }
+
+      setMessages((prev) => [
+      ...prev,
+      { ...messagePayload, own: true }, // 'own: true' taaki humari unique alignment styling mile
+    ]);
   }
 
   return (
     <>
       {hasJoined ? (
-        <Card className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[800px] gap-0 rounded-lg shadow-sm md:min-w-[650px]">
+        <Card className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[800px]  py-0! gap-0 rounded-lg shadow-sm md:min-w-[650px]">
           <CardHeader className="border-b px-5 py-4">
             <CardTitle className="text-lg leading-none">Room Chat</CardTitle>
             <CardDescription className="text-xs">
@@ -71,7 +129,7 @@ export default function ChatDialog() {
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col px-5 py-4">
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-md bg-muted/40 p-3">
-              {roomMessages.map((message) => (
+              {messages.map((message) => (
                 <div
                   key={message.id}
                   className={
@@ -96,10 +154,18 @@ export default function ChatDialog() {
               <Textarea
                 className="max-h-32 min-h-11 resize-none py-2.5"
                 placeholder="Type your message"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    sendMessage(event);
+                  }
+                }}
               />
               <button
                 className="h-11 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 sm:w-24"
                 type="submit"
+                disabled={!text.trim()}
               >
                 Send
               </button>
