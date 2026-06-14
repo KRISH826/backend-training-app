@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
 
 import {
   Card,
@@ -30,59 +30,75 @@ interface messagePayloadType {
   timestamp: string;
 }
 
-const roomMessages = [
+const initialMessages = [
   {
     id: "1",
     name: "Ava",
     text: "Welcome in. The room is ready.",
     own: false,
-  },
-  {
-    id: "2",
-    name: "You",
-    text: "Thanks, I just joined.",
-    own: true,
-  },
-  {
-    id: "3",
-    name: "Sam",
-    text: "Good to see everyone here.",
-    own: false,
-  },
+    timestamp: new Date().toLocaleTimeString(),
+  }
 ];
 
 export default function ChatDialog() {
+  const timer = useRef<number | null>(null);
   const [name, setName] = useState("");
   const [joinedName, setJoinedName] = useState("");
   const socketRef = useRef<Socket | null>(null);
-  const [messages, setMessages] = useState(roomMessages);
+  const [messages, setMessages] = useState(initialMessages);
   const [text, setText] = useState("");
+  const [typers, setTypers] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!text || !socketRef.current) return;
+    socketRef.current.emit("typing", name);
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+    }
+    timer.current = window.setTimeout(() => {
+      socketRef.current?.emit("stopTyping", name);
+    }, 1000);
+  }, [text, name]);
 
   useEffect(() => {
     const socket = wsServer();
     socketRef.current = socket;
-    socket.on("connect", () => {
-      socket.on("roomNotice", (name) => {
-        console.log(`${name} is new member now in our group`)
-      });
 
-      socket.on("chatMessage", (msg: messagePayloadType) => {
-        setMessages((prev) => [...prev, {
-          id: msg.id,
-          name: msg.name,
-          text: msg.text,
-          own: false, // Kyunki yeh kisi aur ka message hai
-          timestamp: msg.timestamp
-        }])
+    socket.on("roomNotice", (name) => {
+      console.log(`${name} is new member now in our group`);
+    });
+
+    socket.on("chat-message", (msg: messagePayloadType) => {
+      setMessages((prev) => [...prev, {
+        id: msg.id,
+        name: msg.name,
+        text: msg.text,
+        own: false,
+        timestamp: msg.timestamp
+      }]);
+    });
+
+    socket.on("typing", (name: string) => {
+      setTypers((prev) => {
+        const isExist = prev.find((typr) => typr == name)
+        if(isExist) return prev;
+        return [...prev, name];
       })
     });
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [joinedName]);
+    socket.on("stopTyping", (name: string) => {
+      setTypers((prev) => prev.filter((typr) => typr != name))
+    })
 
-  
+    return () => {
+      socket.off('roomNotice');
+      socket.off('chat-message');
+      socket.off('typing');
+      socket.off('stopTyping');
+    };
+  }, []);
+
+
 
   const hasJoined = joinedName.length > 0;
 
@@ -93,28 +109,32 @@ export default function ChatDialog() {
       return;
     }
     setJoinedName(trimmedName);
-     socketRef.current?.emit("joinRoom", { name: trimmedName });
+    socketRef.current?.emit("joinRoom", { name: trimmedName });
   }
 
   const sendMessage = (
     event?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
-      event?.preventDefault();
-      if(!text.trim()) {
-        return
-      }
+    event?.preventDefault();
+    if (!text.trim()) {
+      return
+    }
 
-      const messagePayload = {
-        id: String(Date.now()),
-        name: joinedName,
-        text: text,
-        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-      }
+    const messagePayload = {
+      id: String(Date.now()),
+      name: joinedName,
+      text: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
 
-      setMessages((prev) => [
+    setMessages((prev) => [
       ...prev,
       { ...messagePayload, own: true }, // 'own: true' taaki humari unique alignment styling mile
     ]);
+
+    socketRef.current?.emit("chat-message", messagePayload);
+
+    setText("");
   }
 
   return (
@@ -122,10 +142,21 @@ export default function ChatDialog() {
       {hasJoined ? (
         <Card className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[800px]  py-0! gap-0 rounded-lg shadow-sm md:min-w-[650px]">
           <CardHeader className="border-b px-5 py-4">
-            <CardTitle className="text-lg leading-none">Room Chat</CardTitle>
-            <CardDescription className="text-xs">
-              Joined as {joinedName}
-            </CardDescription>
+            <div className="flex items-center justify-between gap-4 ">
+              <div className="flex items-start flex-col gap-1.5">
+                <CardTitle className="text-lg leading-none mb-0!">Room Chat</CardTitle>
+                {
+                  typers.length > 0 &&
+                  <p className="text-xs font-medium opacity-80">
+                    {typers.length > 1 ? "Typing..." : `${typers[0]} is typing...`}
+                  </p>
+                }
+              </div>
+              <CardDescription className="text-xs">
+                Joined as {joinedName}
+              </CardDescription>
+            </div>
+
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col px-5 py-4">
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-md bg-muted/40 p-3">

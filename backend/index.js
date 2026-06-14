@@ -5,7 +5,7 @@ import "./src/queue/example.worker.js";
 import streamRouter from "./src/routes/stream.route.js";
 import { io } from "./src/utils/socket.js";
 import cors from "cors";
-import {createServer} from "http"
+import { createServer } from "http"
 
 
 const app = express();
@@ -46,9 +46,9 @@ app.post("/send-email", async (req, res) => {
 });
 
 io.on("connection", (socket) => {
-    console.log(`User Connected: ${socket.id}`);
+    console.log(`⚡ User Connected: ${socket.id}`);
 
-    socket.on('joinRoom', async ({name}) => {
+    socket.on('joinRoom', async ({ name }) => {
         console.log(`User Joined Room: ${name}`);
         await socket.join("room1");
 
@@ -59,18 +59,27 @@ io.on("connection", (socket) => {
         socket.to("room1").emit("roomNotice", name);
     })
 
-    socket.on("chat-message", async(msg) => {
-        socket.to("room1").emit("chat-message", msg);
+    socket.on("chat-message", async (msgPayload) => {
+        console.log(`New Message from ${msgPayload.name}: ${msgPayload.text}`);
+        socket.to("room1").emit("chat-message", msgPayload);
     })
-})
 
-io.on("disconnect", () => {
-    console.log("User Disconnected");
+    socket.on("typing", async (name) => {
+        socket.to("room1").emit("typing", name);
+    })
+
+    socket.on("stopTyping" , async (name) => {
+        socket.to("room1").emit("stopTyping", name);
+    })
+
+    io.on("disconnect", () => { 
+        console.log("User Disconnected");
+    })
 })
 
 app.use("/stream", streamRouter);
 
-const port=4400;
+const port = 4400;
 httpServer.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 }) 
